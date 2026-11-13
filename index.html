@@ -1,0 +1,516 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Audiogram Studio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Inter:wght@400;500;600&display=swap">
+<style>
+  :root {
+    --bg: #f3f1ee;
+    --panel: #ffffff;
+    --line: #e2ddd6;
+    --fg: #1d1a17;
+    --muted: #6f675e;
+    --accent: #d9892b;
+    --accent-ink: #1d1a17;
+    --stage: #0e0d0c;
+    --danger: #b3412e;
+    --display: "Bricolage Grotesque", "Avenir Next", system-ui, sans-serif;
+    --body: "Inter", system-ui, -apple-system, sans-serif;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #151311; --panel: #1e1b18; --line: #34302b; --fg: #f1ece6;
+      --muted: #a49a8f; --accent: #f0a443; --accent-ink: #151311; --stage: #000;
+      --danger: #e26a54; color-scheme: dark;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    background: var(--bg); color: var(--fg); font: 14px/1.5 var(--body);
+    padding: 24px max(16px, env(safe-area-inset-right, 0px)) 48px max(16px, env(safe-area-inset-left, 0px));
+  }
+  header { max-width: 1280px; margin: 0 auto 24px; display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap; }
+  h1 { font: 800 28px/1.1 var(--display); margin: 0; letter-spacing: -0.02em; }
+  header p { margin: 0; color: var(--muted); }
+  main { max-width: 1280px; margin: 0 auto; display: grid; grid-template-columns: 340px minmax(0, 1fr); gap: 24px; align-items: start; }
+  @media (max-width: 860px) { main { grid-template-columns: 1fr; } }
+
+  .rail { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 20px; display: grid; gap: 18px; }
+  .group { display: grid; gap: 8px; }
+  .group h2 { font: 600 11px/1 var(--body); text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin: 0; }
+  label { display: grid; gap: 4px; font-weight: 500; }
+  label small { color: var(--muted); font-weight: 400; }
+  input[type=text], input[type=number], select {
+    font: inherit; color: var(--fg); background: var(--bg); border: 1px solid var(--line);
+    border-radius: 8px; padding: 8px 10px; width: 100%;
+  }
+  input:focus-visible, select:focus-visible, button:focus-visible, .file:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .file {
+    display: flex; align-items: center; gap: 10px; border: 1px dashed var(--line); border-radius: 8px;
+    padding: 10px 12px; cursor: pointer; background: var(--bg);
+  }
+  .file input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+  .file .name { color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+  .file b { flex: none; }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .seg { display: grid; grid-template-columns: repeat(3, 1fr); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+  .seg input { position: absolute; opacity: 0; }
+  .seg label { text-align: center; padding: 8px 4px; cursor: pointer; font-weight: 500; display: block; }
+  .seg label + input + label, .seg input + label ~ label { border-left: 1px solid var(--line); }
+  .seg input:checked + label { background: var(--fg); color: var(--bg); }
+  .seg input:focus-visible + label { outline: 2px solid var(--accent); outline-offset: -2px; }
+  input[type=color] { width: 100%; height: 38px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); padding: 3px; }
+
+  .studio { display: grid; gap: 14px; min-width: 0; }
+  .stage-wrap { background: var(--stage); border-radius: 12px; display: grid; place-items: center; padding: 16px; min-height: 320px; }
+  canvas { display: block; max-width: 100%; max-height: 68vh; height: auto; width: auto; border-radius: 4px; }
+  .transport { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .transport input[type=range] { flex: 1; min-width: 160px; accent-color: var(--accent); }
+  .time { font-variant-numeric: tabular-nums; color: var(--muted); min-width: 96px; text-align: right; }
+  button {
+    font: 600 14px/1 var(--body); border-radius: 8px; padding: 11px 16px; cursor: pointer;
+    border: 1px solid var(--line); background: var(--panel); color: var(--fg);
+  }
+  button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  button:disabled { opacity: 0.45; cursor: not-allowed; }
+  .export { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 16px 20px; display: grid; gap: 12px; }
+  .export-row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+  .bar { height: 6px; background: var(--line); border-radius: 3px; overflow: hidden; flex: 1; min-width: 120px; }
+  .bar > i { display: block; height: 100%; width: 0; background: var(--accent); }
+  .note { color: var(--muted); margin: 0; }
+  .note.err { color: var(--danger); }
+  .result { display: grid; gap: 10px; }
+  .result video { width: 100%; max-height: 360px; background: var(--stage); border-radius: 8px; }
+  a.download { display: inline-block; font-weight: 600; color: var(--accent-ink); background: var(--accent); padding: 11px 16px; border-radius: 8px; text-decoration: none; justify-self: start; }
+  .check { display: flex; gap: 8px; align-items: center; font-weight: 400; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Audiogram Studio</h1>
+  <p>Drop in an episode, add cover art, export a video for YouTube.</p>
+</header>
+
+<main>
+  <section class="rail" aria-label="Video settings">
+    <div class="group">
+      <h2>Media</h2>
+      <label class="file" for="audioFile"><b>Audio</b><span class="name" id="audioName">Choose an MP3, WAV or M4A…</span>
+        <input type="file" id="audioFile" accept="audio/*"></label>
+      <label class="file" for="imageFile"><b>Cover art</b><span class="name" id="imageName">Optional image…</span>
+        <input type="file" id="imageFile" accept="image/*"></label>
+    </div>
+
+    <div class="group">
+      <h2>Text</h2>
+      <label for="show">Show name<input type="text" id="show" value="The Dakwahene Podcast"></label>
+      <label for="title">Episode title<input type="text" id="title" value="$10 Million in 8 Hours: The Explosive Growth of Lagos Life"></label>
+    </div>
+
+    <div class="group">
+      <h2>Format</h2>
+      <div class="seg" role="radiogroup" aria-label="Aspect ratio">
+        <input type="radio" name="aspect" id="a-land" value="landscape" checked><label for="a-land">16:9</label>
+        <input type="radio" name="aspect" id="a-sq" value="square"><label for="a-sq">1:1</label>
+        <input type="radio" name="aspect" id="a-port" value="portrait"><label for="a-port">9:16</label>
+      </div>
+      <div class="seg" role="radiogroup" aria-label="Waveform style">
+        <input type="radio" name="wave" id="w-bars" value="bars" checked><label for="w-bars">Bars</label>
+        <input type="radio" name="wave" id="w-line" value="line"><label for="w-line">Wave</label>
+        <input type="radio" name="wave" id="w-ring" value="ring"><label for="w-ring">Ring</label>
+      </div>
+      <div class="row">
+        <label for="accent">Accent<input type="color" id="accent" value="#f2b33d"></label>
+        <label for="bgColor">Background<input type="color" id="bgColor" value="#14213d"></label>
+      </div>
+    </div>
+
+    <div class="group">
+      <h2>Clip <small style="text-transform:none;letter-spacing:0;font-weight:400">(leave blank for the full episode)</small></h2>
+      <div class="row">
+        <label for="trimStart">Start<input type="text" id="trimStart" placeholder="0:00" inputmode="numeric"></label>
+        <label for="trimEnd">End<input type="text" id="trimEnd" placeholder="end" inputmode="numeric"></label>
+      </div>
+    </div>
+  </section>
+
+  <section class="studio" aria-label="Preview and export">
+    <div class="stage-wrap"><canvas id="stage" width="1920" height="1080" aria-label="Video preview"></canvas></div>
+
+    <div class="transport">
+      <button id="playBtn" disabled>Play</button>
+      <input type="range" id="seek" min="0" max="1" step="0.01" value="0" disabled aria-label="Seek">
+      <span class="time" id="clock">0:00 / 0:00</span>
+    </div>
+
+    <div class="export">
+      <div class="export-row">
+        <button class="primary" id="exportBtn" disabled>Export video</button>
+        <button id="cancelBtn" hidden>Cancel</button>
+        <div class="bar" id="bar" hidden><i id="barFill"></i></div>
+        <label class="check" for="monitor"><input type="checkbox" id="monitor"> Hear audio while exporting</label>
+      </div>
+      <p class="note" id="note">Add an audio file to begin. Export records in real time, so a 30‑minute episode takes 30 minutes. Keep this tab open and visible while it runs.</p>
+      <div class="result" id="result" hidden>
+        <video id="outVideo" controls playsinline></video>
+        <a class="download" id="dl" href="#">Download video</a>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>
+const $ = id => document.getElementById(id);
+const SIZES = { landscape: [1920, 1080], square: [1080, 1080], portrait: [1080, 1920] };
+const canvas = $('stage'), ctx = canvas.getContext('2d');
+const audio = new Audio();
+audio.preload = 'auto';
+
+const state = { img: null, blurImg: null, hasAudio: false, exporting: null };
+let actx, analyser, speakerGain, streamDest, freq;
+const BARS = 72;
+const levels = new Float32Array(BARS);
+
+function ensureAudioGraph() {
+  if (actx) return;
+  actx = new (window.AudioContext || window.webkitAudioContext)();
+  const src = actx.createMediaElementSource(audio);
+  analyser = actx.createAnalyser();
+  analyser.fftSize = 2048;
+  analyser.smoothingTimeConstant = 0.75;
+  speakerGain = actx.createGain();
+  streamDest = actx.createMediaStreamDestination();
+  src.connect(analyser);
+  src.connect(speakerGain);
+  speakerGain.connect(actx.destination);
+  src.connect(streamDest);
+  freq = new Uint8Array(analyser.frequencyBinCount);
+}
+
+$('audioFile').addEventListener('change', e => {
+  const f = e.target.files[0]; if (!f) return;
+  if (audio.src) URL.revokeObjectURL(audio.src);
+  audio.src = URL.createObjectURL(f);
+  $('audioName').textContent = f.name;
+  if (!$('title').dataset.touched) $('title').value = f.name.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ');
+  state.hasAudio = true;
+  ['playBtn', 'seek', 'exportBtn'].forEach(id => $(id).disabled = false);
+  setNote('Ready. Press Play to preview, or Export video when it looks right.');
+});
+$('title').addEventListener('input', e => e.target.dataset.touched = '1');
+
+$('imageFile').addEventListener('change', e => {
+  const f = e.target.files[0]; if (!f) return;
+  const img = new Image();
+  img.onload = () => {
+    state.img = img;
+    const s = document.createElement('canvas'); s.width = 24; s.height = 24;
+    const sc = s.getContext('2d');
+    const r = Math.max(24 / img.width, 24 / img.height);
+    sc.drawImage(img, (24 - img.width * r) / 2, (24 - img.height * r) / 2, img.width * r, img.height * r);
+    state.blurImg = s;
+  };
+  img.src = URL.createObjectURL(f);
+  $('imageName').textContent = f.name;
+});
+
+document.querySelectorAll('input[name=aspect]').forEach(r => r.addEventListener('change', () => {
+  const [w, h] = SIZES[r.value]; canvas.width = w; canvas.height = h;
+}));
+
+const val = name => document.querySelector(`input[name=${name}]:checked`).value;
+
+$('playBtn').addEventListener('click', async () => {
+  ensureAudioGraph(); await actx.resume();
+  if (audio.paused) audio.play(); else audio.pause();
+});
+audio.addEventListener('play', () => $('playBtn').textContent = 'Pause');
+audio.addEventListener('pause', () => $('playBtn').textContent = 'Play');
+audio.addEventListener('loadedmetadata', () => { $('seek').max = audio.duration; tick(); });
+audio.addEventListener('timeupdate', tick);
+$('seek').addEventListener('input', e => { audio.currentTime = +e.target.value; });
+function tick() {
+  if (!state.exporting) $('seek').value = audio.currentTime;
+  $('clock').textContent = `${fmt(audio.currentTime)} / ${fmt(audio.duration || 0)}`;
+}
+
+function fmt(t) {
+  t = Math.max(0, Math.floor(t || 0));
+  const h = Math.floor(t / 3600), m = Math.floor(t % 3600 / 60), s = t % 60;
+  return (h ? h + ':' + String(m).padStart(2, '0') : m) + ':' + String(s).padStart(2, '0');
+}
+function parseTime(str) {
+  str = (str || '').trim(); if (!str) return null;
+  const parts = str.split(':').map(Number);
+  if (parts.some(isNaN)) return NaN;
+  return parts.reduce((acc, p) => acc * 60 + p, 0);
+}
+
+function readLevels() {
+  const playing = analyser && !audio.paused;
+  if (playing) {
+    analyser.getByteFrequencyData(freq);
+    const binHz = actx.sampleRate / analyser.fftSize;
+    const lo = Math.max(1, Math.floor(60 / binHz)), hi = Math.floor(9000 / binHz);
+    for (let i = 0; i < BARS; i++) {
+      const a = Math.floor(lo * Math.pow(hi / lo, i / BARS));
+      const b = Math.max(a + 1, Math.floor(lo * Math.pow(hi / lo, (i + 1) / BARS)));
+      let sum = 0; for (let k = a; k < b; k++) sum += freq[k];
+      let v = sum / (b - a) / 255;
+      v = Math.pow(v, 1.6) * (1 + i / BARS * 1.2);
+      levels[i] += (Math.min(1, v) - levels[i]) * 0.4;
+    }
+  } else {
+    const t = performance.now() / 1000;
+    for (let i = 0; i < BARS; i++) {
+      const idle = 0.06 + 0.04 * Math.sin(i * 0.45 + t * 1.5);
+      levels[i] += (idle - levels[i]) * 0.08;
+    }
+  }
+}
+
+function layout(W, H, aspect) {
+  if (aspect === 'landscape') {
+    const size = H * 0.5;
+    return { align: 'left', cover: { x: W * 0.07, y: H * 0.12, s: size },
+      text: { x: W * 0.07 + size + W * 0.05, y: H * 0.12, w: W * 0.86 - size - W * 0.05, h: size },
+      wave: { x: W * 0.07, y: H * 0.7, w: W * 0.86, h: H * 0.14 },
+      prog: { x: W * 0.07, y: H * 0.9, w: W * 0.86 }, title: H * 0.072, small: H * 0.03 };
+  }
+  if (aspect === 'square') {
+    const size = W * 0.4;
+    return { align: 'center', cover: { x: (W - size) / 2, y: H * 0.07, s: size },
+      text: { x: W * 0.08, y: H * 0.07 + size + H * 0.045, w: W * 0.84, h: H * 0.2 },
+      wave: { x: W * 0.08, y: H * 0.72, w: W * 0.84, h: H * 0.12 },
+      prog: { x: W * 0.08, y: H * 0.9, w: W * 0.84 }, title: W * 0.052, small: W * 0.026 };
+  }
+  const size = W * 0.72;
+  return { align: 'center', cover: { x: (W - size) / 2, y: H * 0.1, s: size },
+    text: { x: W * 0.08, y: H * 0.1 + size + H * 0.04, w: W * 0.84, h: H * 0.2 },
+    wave: { x: W * 0.08, y: H * 0.7, w: W * 0.84, h: H * 0.1 },
+    prog: { x: W * 0.08, y: H * 0.86, w: W * 0.84 }, title: W * 0.07, small: W * 0.034 };
+}
+
+function wrap(text, maxW, maxLines) {
+  const words = text.split(/\s+/).filter(Boolean), lines = [];
+  let line = '';
+  for (const w of words) {
+    const test = line ? line + ' ' + w : w;
+    if (ctx.measureText(test).width > maxW && line) { lines.push(line); line = w; }
+    else line = test;
+  }
+  if (line) lines.push(line);
+  if (lines.length > maxLines) {
+    lines.length = maxLines;
+    let last = lines[maxLines - 1];
+    while (ctx.measureText(last + '…').width > maxW && last.length) last = last.slice(0, -1);
+    lines[maxLines - 1] = last.trimEnd() + '…';
+  }
+  return lines;
+}
+
+function roundRect(x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
+}
+
+function drawCover(c, round) {
+  ctx.save();
+  if (round) { ctx.beginPath(); ctx.arc(c.x + c.s / 2, c.y + c.s / 2, c.s / 2, 0, Math.PI * 2); }
+  else roundRect(c.x, c.y, c.s, c.s, c.s * 0.04);
+  ctx.shadowColor = 'rgba(0,0,0,0.45)'; ctx.shadowBlur = c.s * 0.08; ctx.shadowOffsetY = c.s * 0.03;
+  ctx.fillStyle = '#000'; ctx.fill(); ctx.shadowColor = 'transparent';
+  ctx.clip();
+  if (state.img) {
+    const img = state.img, r = Math.max(c.s / img.width, c.s / img.height);
+    ctx.drawImage(img, c.x + (c.s - img.width * r) / 2, c.y + (c.s - img.height * r) / 2, img.width * r, img.height * r);
+  } else {
+    const accent = $('accent').value;
+    ctx.fillStyle = accent; ctx.fillRect(c.x, c.y, c.s, c.s);
+    const initials = ($('show').value || 'Podcast').split(/\s+/).filter(w => /^[A-Za-z0-9]/.test(w) && !/^(the|a|of|and)$/i.test(w))
+      .slice(0, 2).map(w => w[0].toUpperCase()).join('') || 'P';
+    ctx.fillStyle = 'rgba(0,0,0,0.78)';
+    ctx.font = `800 ${c.s * 0.38}px ${getComputedStyle(document.documentElement).getPropertyValue('--display')}`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(initials, c.x + c.s / 2, c.y + c.s / 2 + c.s * 0.02);
+  }
+  ctx.restore();
+}
+
+function draw() {
+  const W = canvas.width, H = canvas.height, aspect = val('aspect'), style = val('wave');
+  const accent = $('accent').value, bg = $('bgColor').value;
+  const display = getComputedStyle(document.documentElement).getPropertyValue('--display');
+  const body = getComputedStyle(document.documentElement).getPropertyValue('--body');
+  const L = layout(W, H, aspect);
+  readLevels();
+
+  ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+  if (state.blurImg) {
+    ctx.save(); ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
+    const r = Math.max(W, H) * 1.15;
+    ctx.drawImage(state.blurImg, (W - r) / 2, (H - r) / 2, r, r);
+    ctx.restore();
+    ctx.globalAlpha = 0.55; ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H); ctx.globalAlpha = 1;
+  } else {
+    const g = ctx.createRadialGradient(W * 0.2, H * 0.1, 0, W * 0.2, H * 0.1, Math.max(W, H));
+    g.addColorStop(0, 'rgba(255,255,255,0.10)'); g.addColorStop(1, 'rgba(0,0,0,0.35)');
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  }
+
+  if (style === 'ring') {
+    const c = L.cover, cx = c.x + c.s / 2, cy = c.y + c.s / 2, inner = c.s * 0.4;
+    const ringCover = { x: cx - inner, y: cy - inner, s: inner * 2 };
+    const maxLen = c.s * 0.11, n = BARS * 2;
+    ctx.strokeStyle = accent; ctx.lineCap = 'round'; ctx.lineWidth = Math.max(3, inner * 2 * Math.PI / n * 0.45);
+    for (let i = 0; i < n; i++) {
+      const v = levels[i < BARS ? i : n - 1 - i];
+      const a = (i / n) * Math.PI * 2 - Math.PI / 2;
+      const r0 = inner + c.s * 0.03, r1 = r0 + 4 + v * maxLen;
+      ctx.beginPath();
+      ctx.moveTo(cx + Math.cos(a) * r0, cy + Math.sin(a) * r0);
+      ctx.lineTo(cx + Math.cos(a) * r1, cy + Math.sin(a) * r1);
+      ctx.stroke();
+    }
+    drawCover(ringCover, true);
+  } else {
+    drawCover(L.cover, false);
+  }
+
+  const T = L.text, ax = L.align === 'center' ? T.x + T.w / 2 : T.x;
+  ctx.textAlign = L.align; ctx.textBaseline = 'top';
+  ctx.font = `600 ${L.small}px ${body}`;
+  ctx.fillStyle = accent;
+  const show = ($('show').value || '').toUpperCase();
+  if ('letterSpacing' in ctx) ctx.letterSpacing = `${L.small * 0.12}px`;
+  ctx.fillText(show, ax, T.y + (aspect === 'landscape' ? T.h * 0.12 : 0));
+  if ('letterSpacing' in ctx) ctx.letterSpacing = '0px';
+  ctx.font = `800 ${L.title}px ${display}`;
+  ctx.fillStyle = '#fff';
+  const lines = wrap($('title').value || 'Untitled episode', T.w, aspect === 'landscape' ? 4 : 3);
+  let ty = T.y + (aspect === 'landscape' ? T.h * 0.12 : 0) + L.small * 1.9;
+  for (const ln of lines) { ctx.fillText(ln, ax, ty); ty += L.title * 1.12; }
+
+  const Wv = L.wave, mid = Wv.y + Wv.h / 2;
+  ctx.fillStyle = accent; ctx.strokeStyle = accent;
+  if (style === 'bars') {
+    const step = Wv.w / BARS, bw = step * 0.55;
+    for (let i = 0; i < BARS; i++) {
+      const h = Math.max(bw, levels[i] * Wv.h);
+      roundRect(Wv.x + i * step + (step - bw) / 2, mid - h / 2, bw, h, bw / 2); ctx.fill();
+    }
+  } else if (style === 'line') {
+    const pts = BARS, step = Wv.w / (pts - 1);
+    for (const [sign, alpha] of [[1, 0.9], [-1, 0.35]]) {
+      ctx.beginPath(); ctx.moveTo(Wv.x, mid);
+      for (let i = 0; i < pts; i++) {
+        const x = Wv.x + i * step, y = mid - sign * levels[i] * Wv.h / 2;
+        const px = Wv.x + (i - 1) * step, py = mid - sign * levels[Math.max(0, i - 1)] * Wv.h / 2;
+        ctx.quadraticCurveTo(px, py, (px + x) / 2, (py + y) / 2);
+      }
+      ctx.lineTo(Wv.x + Wv.w, mid); ctx.closePath();
+      ctx.globalAlpha = alpha; ctx.fill(); ctx.globalAlpha = 1;
+    }
+  }
+
+  const P = L.prog, ex = state.exporting;
+  const start = ex ? ex.start : 0, end = ex ? ex.end : (audio.duration || 0);
+  const t = Math.min(Math.max(audio.currentTime - start, 0), end - start);
+  const frac = end > start ? t / (end - start) : 0;
+  const th = Math.max(4, H * 0.006);
+  ctx.fillStyle = 'rgba(255,255,255,0.22)'; roundRect(P.x, P.y, P.w, th, th / 2); ctx.fill();
+  ctx.fillStyle = accent; roundRect(P.x, P.y, Math.max(th, P.w * frac), th, th / 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(P.x + P.w * frac, P.y + th / 2, th * 1.8, 0, Math.PI * 2); ctx.fill();
+  ctx.font = `500 ${L.small * 0.85}px ${body}`; ctx.fillStyle = 'rgba(255,255,255,0.75)';
+  ctx.textBaseline = 'top';
+  ctx.textAlign = 'left'; ctx.fillText(fmt(t), P.x, P.y + th + L.small * 0.6);
+  ctx.textAlign = 'right'; ctx.fillText(fmt(end - start), P.x + P.w, P.y + th + L.small * 0.6);
+
+  requestAnimationFrame(draw);
+}
+document.fonts.ready.then(() => requestAnimationFrame(draw));
+
+function pickMime() {
+  const opts = ['video/mp4;codecs=avc1.640028,mp4a.40.2', 'video/mp4;codecs=avc1,mp4a', 'video/mp4',
+    'video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm'];
+  return opts.find(m => window.MediaRecorder && MediaRecorder.isTypeSupported(m));
+}
+function setNote(msg, err) { const n = $('note'); n.textContent = msg; n.classList.toggle('err', !!err); }
+function slug(s) { return (s || 'episode').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 60) || 'episode'; }
+
+$('exportBtn').addEventListener('click', async () => {
+  const mime = pickMime();
+  if (!mime || !canvas.captureStream) return setNote('This browser cannot record video. Try the latest Chrome, Edge or Safari.', true);
+  if (!audio.duration) return setNote('The audio is still loading. Try again in a moment.', true);
+  const s = parseTime($('trimStart').value), e = parseTime($('trimEnd').value);
+  if (Number.isNaN(s) || Number.isNaN(e)) return setNote('Write clip times like 1:30 or 1:02:45.', true);
+  const start = s ?? 0, end = Math.min(e ?? audio.duration, audio.duration);
+  if (end - start < 1) return setNote('The clip end must come at least one second after the start.', true);
+
+  ensureAudioGraph(); await actx.resume();
+  audio.pause();
+  audio.currentTime = start;
+  await new Promise(r => audio.addEventListener('seeked', r, { once: true }));
+
+  const stream = new MediaStream([...canvas.captureStream(30).getVideoTracks(), ...streamDest.stream.getAudioTracks()]);
+  const rec = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 8_000_000, audioBitsPerSecond: 192_000 });
+  const chunks = [];
+  rec.ondataavailable = ev => ev.data.size && chunks.push(ev.data);
+  const job = state.exporting = { start, end, rec, cancelled: false };
+
+  rec.onstop = () => {
+    clearInterval(job.timer);
+    stream.getVideoTracks().forEach(t => t.stop());
+    speakerGain.gain.value = 1;
+    state.exporting = null;
+    toggleUI(false);
+    if (job.cancelled) return setNote('Export cancelled.');
+    const type = mime.split(';')[0], ext = type === 'video/mp4' ? 'mp4' : 'webm';
+    const url = URL.createObjectURL(new Blob(chunks, { type }));
+    $('outVideo').src = url;
+    $('dl').href = url; $('dl').download = `${slug($('title').value)}.${ext}`;
+    $('dl').textContent = `Download ${ext.toUpperCase()}`;
+    $('result').hidden = false;
+    setNote(ext === 'webm'
+      ? 'Done. This browser saves WebM, which YouTube accepts. Use Safari or a recent Chrome if you need MP4.'
+      : 'Done. The MP4 is ready to upload.');
+  };
+
+  const finish = () => { if (rec.state !== 'inactive') { audio.pause(); rec.stop(); } };
+  job.timer = setInterval(() => {
+    const p = (audio.currentTime - start) / (end - start);
+    $('barFill').style.width = Math.min(100, p * 100).toFixed(1) + '%';
+    setNote(`Recording… ${fmt(audio.currentTime - start)} of ${fmt(end - start)}. Keep this tab visible.`);
+    if (audio.currentTime >= end || audio.ended) finish();
+  }, 200);
+  job.finish = finish;
+
+  speakerGain.gain.value = $('monitor').checked ? 1 : 0;
+  $('result').hidden = true;
+  toggleUI(true);
+  rec.start(1000);
+  await audio.play();
+});
+
+$('cancelBtn').addEventListener('click', () => {
+  if (!state.exporting) return;
+  state.exporting.cancelled = true; state.exporting.finish();
+});
+$('monitor').addEventListener('change', e => { if (state.exporting) speakerGain.gain.value = e.target.checked ? 1 : 0; });
+
+function toggleUI(on) {
+  $('exportBtn').hidden = on; $('cancelBtn').hidden = !on; $('bar').hidden = !on;
+  $('barFill').style.width = '0';
+  ['playBtn', 'seek', 'audioFile', 'imageFile', 'trimStart', 'trimEnd'].forEach(id => $(id).disabled = on);
+  document.querySelectorAll('input[name=aspect]').forEach(r => r.disabled = on);
+}
+</script>
+</body>
+</html>
