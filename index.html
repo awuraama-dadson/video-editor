@@ -103,7 +103,7 @@
     <div class="group">
       <h2>Media</h2>
       <label class="file" for="audioFile"><b>Audio</b><span class="name" id="audioName">Choose an MP3, WAV or M4A…</span>
-        <input type="file" id="audioFile" accept="audio/*"></label>
+        <input type="file" id="audioFile" accept="audio/*,.m4a,.aac,.mp3,.wav,.ogg,.opus,.flac,.mp4,audio/mp4,audio/x-m4a,audio/aac"></label>
       <label class="file" for="imageFile"><b>Cover art</b><span class="name" id="imageName">Optional image…</span>
         <input type="file" id="imageFile" accept="image/*"></label>
     </div>
@@ -200,9 +200,21 @@ $('audioFile').addEventListener('change', e => {
   audio.src = URL.createObjectURL(f);
   $('audioName').textContent = f.name;
   if (!$('title').dataset.touched) $('title').value = f.name.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ');
+  state.hasAudio = false;
+  ['playBtn', 'seek', 'exportBtn'].forEach(id => $(id).disabled = true);
+  setNote('Loading audio…');
+});
+audio.addEventListener('loadedmetadata', () => {
+  if (!audio.src || state.hasAudio) return;
   state.hasAudio = true;
   ['playBtn', 'seek', 'exportBtn'].forEach(id => $(id).disabled = false);
   setNote('Ready. Press Play to preview, or Export video when it looks right.');
+});
+audio.addEventListener('error', () => {
+  if (!audio.src) return;
+  state.hasAudio = false;
+  ['playBtn', 'seek', 'exportBtn'].forEach(id => $(id).disabled = true);
+  setNote("This browser can't play that audio file. Try an MP3, WAV or M4A (AAC). If it's an M4A recorded in Apple Lossless, export it again as AAC or MP3.", true);
 });
 $('title').addEventListener('input', e => e.target.dataset.touched = '1');
 
